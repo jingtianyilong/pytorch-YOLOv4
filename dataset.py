@@ -262,7 +262,7 @@ class Yolo_dataset(Dataset):
 
         self.truth = truth
         self.imgs = list(self.truth.keys())
-
+z
     def __len__(self):
         return len(self.truth.keys())
 
@@ -431,13 +431,13 @@ def get_image_id(filename:str) -> int:
 
 
 if __name__ == "__main__":
-    from cfg import Cfg
+    from confi import cfg
     import matplotlib.pyplot as plt
 
     random.seed(2020)
     np.random.seed(2020)
-    Cfg.dataset_dir = '/mnt/e/Dataset'
-    dataset = Yolo_dataset(Cfg.train_label, Cfg)
+    cfg.dataset_dir = '/mnt/e/Dataset'
+    dataset = Yolo_dataset(cfg.train_label, cfg)
     for i in range(100):
         out_img, out_bboxes = dataset.__getitem__(i)
         a = draw_box(out_img.copy(), out_bboxes.astype(np.int32))

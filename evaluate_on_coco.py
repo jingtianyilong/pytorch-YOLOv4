@@ -22,7 +22,7 @@ from easydict import EasyDict as edict
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-from cfg import Cfg
+from confg import cfg
 from tool.darknet2pytorch import Darknet
 from tool.utils import load_class_names
 from tool.torch_utils import do_detect

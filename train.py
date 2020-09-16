@@ -29,7 +29,8 @@ from tensorboardX import SummaryWriter
 from easydict import EasyDict as edict
 
 from dataset import Yolo_dataset
-from cfg import Cfg
+from config import cfg
+from config import update_config
 from models import Yolov4
 from tool.darknet2pytorch import Darknet
 
@@ -605,7 +606,8 @@ def _get_date_str():
 
 if __name__ == "__main__":
     logging = init_logger(log_dir='log')
-    cfg = get_args(**Cfg)
+    args = get_args(**.kwargs)
+    update_config(cfg, args)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
