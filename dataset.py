@@ -262,7 +262,7 @@ class Yolo_dataset(Dataset):
 
         self.truth = truth
         self.imgs = list(self.truth.keys())
-z
+
     def __len__(self):
         return len(self.truth.keys())
 

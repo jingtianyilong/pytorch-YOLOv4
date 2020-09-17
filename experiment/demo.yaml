@@ -1,0 +1,42 @@
+use_darknet_cfg: True
+cfgfile: '/workspace/code/cfg'/yolov4.cfg'
+SEED: 358
+pretrained: '/workspace/code/yolov4.conv.137'
+keep_checkpoint_max: 10
+batch: 64
+subdivisions: 16
+width: 608
+height: 608
+channels: 3
+momentum: 0.949
+decay: 0.0005
+angle: 0
+saturation: 1.5
+exposure: 1.5
+hue: .1
+
+learning_rate: 0.00261
+burn_in: 1000
+max_batches: 500500
+steps: [400000, 450000]
+scales: .1, .1
+
+cutmix: 0
+mosaic: 1
+
+letter_box: 0
+jitter: 0.2
+classes: 80
+track: 0
+flip: 1
+blur: 0
+gaussian: 0
+boxes: 60 
+TRAIN_EPOCHS: 80
+train_label: "/data/train.txt"
+val_label: "/data/val.txt"
+TRAIN_OPTIMIZER: 'adam'
+checkpoints: '/workspace/code/checkpoints'
+TRAIN_TENSORBOARD_DIR: '/workspace/code/log'
+iou_type: 'iou'
+keep_checkpoint_max: 10
