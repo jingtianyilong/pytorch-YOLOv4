@@ -5,7 +5,9 @@ _C = CN()
 
 _C.use_darknet_cfg = True
 _C.cfgfile = os.path.join(_BASE_DIR, 'cfg', 'yolov4.cfg')
-
+_C.SEED = 358
+_C.pretrained = os.path.join(_BASE_DIR, 'yolov4.conv.137')
+_C.keep_checkpoint_max = 10
 _C.batch = 64
 _C.subdivisions = 16
 _C.width = 608
@@ -38,9 +40,9 @@ _C.flip = 1
 _C.blur = 0
 _C.gaussian = 0
 _C.boxes = 60  # box num
-_C.TRAIN_EPOCHS = 300
-_C.train_label = os.path.join(_BASE_DIR, 'data', 'train.txt')
-_C.val_label = os.path.join(_BASE_DIR, 'data' ,'val.txt')
+_C.TRAIN_EPOCHS = 80
+_C.train_label = "/data/train.txt"
+_C.val_label = "/data/val.txt"
 _C.TRAIN_OPTIMIZER = 'adam'
 
 if _C.mosaic and _C.cutmix:

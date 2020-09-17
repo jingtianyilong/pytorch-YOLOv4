@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from tool.region_loss import RegionLoss
-from tool.yolo_layer import YoloLayer
+from utils.yolo_layer import YoloLayer
 from tool.config import *
 from tool.torch_utils import *
 

@@ -24,7 +24,7 @@ from pycocotools.cocoeval import COCOeval
 
 from confg import cfg
 from tool.darknet2pytorch import Darknet
-from tool.utils import load_class_names
+from utils.utils import load_class_names
 from tool.torch_utils import do_detect
 
 

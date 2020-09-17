@@ -14,7 +14,7 @@ from __future__ import division
 import cv2
 from tool.darknet2pytorch import Darknet
 import argparse
-from tool.utils import *
+from utils.utils import *
 from tool.torch_utils import *
 
 

@@ -3,11 +3,19 @@ import os
 import time
 import math
 import numpy as np
-
+import torch
+import random
 import itertools
 import struct  # get_image_size
 import imghdr  # get_image_size
 
+def init_seed(number=356):
+    random.seed(number)
+    torch.manual_seed(number)
+    torch.cuda.manual_seed_all(number)
+    np.random.seed(number)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def sigmoid(x):
     return 1.0 / (np.exp(-x) + 1.)

@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from tool.torch_utils import *
-from tool.yolo_layer import YoloLayer
+from utils.yolo_layer import YoloLayer
 
 
 class Mish(torch.nn.Module):
@@ -490,7 +490,7 @@ if __name__ == "__main__":
     sized = cv2.resize(img, (width, height))
     sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
 
-    from tool.utils import load_class_names, plot_boxes_cv2
+    from utils.utils import load_class_names, plot_boxes_cv2
     from tool.torch_utils import do_detect
 
     for i in range(2):  # This 'for' loop is for speed check

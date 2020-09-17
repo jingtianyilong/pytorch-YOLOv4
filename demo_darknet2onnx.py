@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 import onnxruntime
 
-from tool.utils import *
+from utils.utils import *
 from tool.darknet2onnx import *
 
 
