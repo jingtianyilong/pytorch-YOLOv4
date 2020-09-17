@@ -288,13 +288,13 @@ def evaluate(model, data_loader, cfg, device, logger=None, **kwargs):
     return coco_evaluator
 
 
-def get_args(**kwargs):
+def getArgs():
     parser = argparse.ArgumentParser(description='Train the Model on images and target masks',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parse.add_argument('--config_file', type=str, help="yaml configuration file")
+    parser.add_argument('--config_file', type=str, help="yaml configuration file")
     parser.add_argument('--load', dest='load', type=str, default=None,
                         help='Load model from a .pth file')
-    args = parse.parse_args()
+    args = parser.parse_args()
     return args
 
 

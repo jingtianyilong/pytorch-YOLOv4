@@ -1,12 +1,12 @@
 import os
-from yacs.config import CfgNode ad CN
+from yacs.config import CfgNode as CN
 
 _C = CN()
 
 _C.use_darknet_cfg = True
-_C.cfgfile = os.path.join(_BASE_DIR, 'cfg', 'yolov4.cfg')
+_C.cfgfile = "experiment/yolov4.cfg" 
 _C.SEED = 358
-_C.pretrained = os.path.join(_BASE_DIR, 'yolov4.conv.137')
+_C.pretrained = 'yolov4.conv.137'
 _C.keep_checkpoint_max = 10
 _C.batch = 64
 _C.subdivisions = 16
@@ -52,8 +52,8 @@ elif _C.cutmix:
 elif _C.mosaic:
     _C.mixup = 3
     
-_C.checkpoints = os.path.join(_BASE_DIR, 'checkpoints')
-_C.TRAIN_TENSORBOARD_DIR = os.path.join(_BASE_DIR, 'log')
+_C.checkpoints = 'checkpoints'
+_C.TRAIN_TENSORBOARD_DIR = 'log'
 
 _C.iou_type = 'iou'  # 'giou', 'diou', 'ciou'
 
@@ -62,14 +62,6 @@ _C.keep_checkpoint_max = 10
 def update_config(cfg, args):
     cfg.defrost()
     cfg.merge_from_file(args.config_file)
-    # cfg.merge_from_list(args.opts)
-
-    # if args.modelDir:
-    #     cfg.OUTPUT_DIR = args.modelDir
-
-    if args.log_dir:
-        cfg.LOG_PATH = args.log_dir
-
     cfg.freeze()
 
 

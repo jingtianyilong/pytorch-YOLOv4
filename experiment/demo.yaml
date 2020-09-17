@@ -1,5 +1,5 @@
 use_darknet_cfg: True
-cfgfile: '/workspace/code/cfg'/yolov4.cfg'
+cfgfile: '/workspace/code/experiment/yolov4.cfg'
 SEED: 358
 pretrained: '/workspace/code/yolov4.conv.137'
 keep_checkpoint_max: 10
@@ -26,15 +26,15 @@ mosaic: 1
 
 letter_box: 0
 jitter: 0.2
-classes: 80
+classes: 7
 track: 0
 flip: 1
 blur: 0
 gaussian: 0
 boxes: 60 
 TRAIN_EPOCHS: 80
-train_label: "/data/train.txt"
-val_label: "/data/val.txt"
+train_label: "/data/anyverse_train.txt"
+val_label: "/data/anyverse_val.txt"
 TRAIN_OPTIMIZER: 'adam'
 checkpoints: '/workspace/code/checkpoints'
 TRAIN_TENSORBOARD_DIR: '/workspace/code/log'
