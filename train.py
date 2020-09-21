@@ -46,7 +46,8 @@ def collate(batch):
     images = np.concatenate(images, axis=0)
     images = images.transpose(0, 3, 1, 2)
     images = torch.from_numpy(images).div(255.0)
-    bboxes = np.concatenate(bboxes, axis=0)
+    if len(bboxes) != 0:
+        bboxes = np.concatenate(bboxes, axis=0)
     bboxes = torch.from_numpy(bboxes)
     return images, bboxes
 
@@ -131,8 +132,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
         with tqdm(total=n_train, desc=f'Epoch {epoch + 1}/{epochs}', unit='img', ncols=50) as pbar:
             for i, batch in enumerate(train_loader):
-                global_step += 1
-                epoch_step += 1
+                global_step = global_step + 1
+                epoch_step = epoch_step + 1
                 images = batch[0]
                 bboxes = batch[1]
 
@@ -144,7 +145,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                 # loss = loss / config.subdivisions
                 loss.backward()
 
-                epoch_loss += loss.item()
+                epoch_loss = epoch_loss + loss.item()
 
                 if global_step % config.subdivisions == 0:
                     optimizer.step()
@@ -291,7 +292,7 @@ def evaluate(model, data_loader, cfg, device, logger=None, **kwargs):
 def getArgs():
     parser = argparse.ArgumentParser(description='Train the Model on images and target masks',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--config_file', type=str, help="yaml configuration file")
+    parser.add_argument('--config_file', type=str, default="experiment/demo.yaml", help="yaml configuration file")
     parser.add_argument('--load', dest='load', type=str, default=None,
                         help='Load model from a .pth file')
     args = parser.parse_args()
@@ -359,7 +360,7 @@ if __name__ == "__main__":
         train(model=model,
               config=cfg,
               epochs=cfg.TRAIN_EPOCHS,
-              device=device, )
+              device=device)
     except KeyboardInterrupt:
         torch.save(model.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')

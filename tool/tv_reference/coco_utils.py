@@ -172,6 +172,7 @@ def convert_to_coco_api(ds, bbox_fmt='voc'):
             pass
         else:
             raise ValueError(f"bounding box format {bbox_fmt} not supported!")
+        
         bboxes = bboxes.tolist()
         labels = targets['labels'].tolist()
         areas = targets['area'].tolist()

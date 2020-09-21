@@ -1,3 +1,4 @@
+import math
 import torch
 import numpy as np
 import torch.nn as nn
@@ -210,28 +211,28 @@ class Yolo_loss(nn.Module):
             output[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(output[..., np.r_[:2, 4:n_ch]])
 
             pred = output[..., :4].clone()
-            pred[..., 0] += self.grid_x[output_id]
-            pred[..., 1] += self.grid_y[output_id]
+            pred[..., 0] = pred[..., 0] + self.grid_x[output_id]
+            pred[..., 1] = pred[..., 1] + self.grid_y[output_id]
             pred[..., 2] = torch.exp(pred[..., 2]) * self.anchor_w[output_id]
             pred[..., 3] = torch.exp(pred[..., 3]) * self.anchor_h[output_id]
 
             obj_mask, tgt_mask, tgt_scale, target = self.build_target(pred, labels, batchsize, fsize, n_ch, output_id)
 
             # loss calculation
-            output[..., 4] *= obj_mask
-            output[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
-            output[..., 2:4] *= tgt_scale
+            output[..., 4] = output[..., 4] * obj_mask
+            output[..., np.r_[0:4, 5:n_ch]] = output[..., np.r_[0:4, 5:n_ch]] * tgt_mask
+            output[..., 2:4] = output[..., 2:4] * tgt_scale
 
-            target[..., 4] *= obj_mask
-            target[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
-            target[..., 2:4] *= tgt_scale
+            target[..., 4] = target[..., 4] * obj_mask
+            target[..., np.r_[0:4, 5:n_ch]] = target[..., np.r_[0:4, 5:n_ch]] * tgt_mask
+            target[..., 2:4] = target[..., 2:4] * tgt_scale
 
-            loss_xy += F.binary_cross_entropy(input=output[..., :2], target=target[..., :2],
+            loss_xy = loss_xy + F.binary_cross_entropy(input=output[..., :2], target=target[..., :2],
                                               weight=tgt_scale * tgt_scale, reduction='sum')
-            loss_wh += F.mse_loss(input=output[..., 2:4], target=target[..., 2:4], reduction='sum') / 2
-            loss_obj += F.binary_cross_entropy(input=output[..., 4], target=target[..., 4], reduction='sum')
-            loss_cls += F.binary_cross_entropy(input=output[..., 5:], target=target[..., 5:], reduction='sum')
-            loss_l2 += F.mse_loss(input=output, target=target, reduction='sum')
+            loss_wh = loss_wh + F.mse_loss(input=output[..., 2:4], target=target[..., 2:4], reduction='sum') / 2
+            loss_obj = loss_obj + F.binary_cross_entropy(input=output[..., 4], target=target[..., 4], reduction='sum')
+            loss_cls = loss_cls + F.binary_cross_entropy(input=output[..., 5:], target=target[..., 5:], reduction='sum')
+            loss_l2 = loss_l2 + F.mse_loss(input=output, target=target, reduction='sum')
 
         loss = loss_xy + loss_wh + loss_obj + loss_cls
 

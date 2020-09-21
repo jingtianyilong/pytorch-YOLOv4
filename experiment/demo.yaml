@@ -1,7 +1,8 @@
-use_darknet_cfg: True
+use_darknet_cfg: False
+dataset_dir: "/data"
 cfgfile: '/workspace/code/experiment/yolov4.cfg'
 SEED: 358
-pretrained: '/workspace/code/yolov4.conv.137'
+pretrained: '/workspace/code/yolov4.conv.137.pth'
 keep_checkpoint_max: 10
 batch: 64
 subdivisions: 16

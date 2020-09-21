@@ -5,6 +5,7 @@ _C = CN()
 
 _C.use_darknet_cfg = True
 _C.cfgfile = "experiment/yolov4.cfg" 
+_C.dataset_dir = "/data"
 _C.SEED = 358
 _C.pretrained = 'yolov4.conv.137'
 _C.keep_checkpoint_max = 10
@@ -32,7 +33,7 @@ _C.mosaic = 1
 
 _C.letter_box = 0
 _C.jitter = 0.2
-_C.classes = 80
+_C.classes = 7 
 _C.track = 0
 _C.w = _C.width
 _C.h = _C.height

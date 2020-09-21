@@ -182,33 +182,34 @@ def image_data_augmentation(mat, w, h, pleft, ptop, swidth, sheight, flip, dhue,
 
 
 def filter_truth(bboxes, dx, dy, sx, sy, xd, yd):
-    bboxes[:, 0] -= dx
-    bboxes[:, 2] -= dx
-    bboxes[:, 1] -= dy
-    bboxes[:, 3] -= dy
+    if bboxes != []:
+        bboxes[:, 0] -= dx
+        bboxes[:, 2] -= dx
+        bboxes[:, 1] -= dy
+        bboxes[:, 3] -= dy
 
-    bboxes[:, 0] = np.clip(bboxes[:, 0], 0, sx)
-    bboxes[:, 2] = np.clip(bboxes[:, 2], 0, sx)
+        bboxes[:, 0] = np.clip(bboxes[:, 0], 0, sx)
+        bboxes[:, 2] = np.clip(bboxes[:, 2], 0, sx)
 
-    bboxes[:, 1] = np.clip(bboxes[:, 1], 0, sy)
-    bboxes[:, 3] = np.clip(bboxes[:, 3], 0, sy)
+        bboxes[:, 1] = np.clip(bboxes[:, 1], 0, sy)
+        bboxes[:, 3] = np.clip(bboxes[:, 3], 0, sy)
 
-    out_box = list(np.where(((bboxes[:, 1] == sy) & (bboxes[:, 3] == sy)) |
-                            ((bboxes[:, 0] == sx) & (bboxes[:, 2] == sx)) |
-                            ((bboxes[:, 1] == 0) & (bboxes[:, 3] == 0)) |
-                            ((bboxes[:, 0] == 0) & (bboxes[:, 2] == 0)))[0])
-    list_box = list(range(bboxes.shape[0]))
-    for i in out_box:
-        list_box.remove(i)
-    bboxes = bboxes[list_box]
+        out_box = list(np.where(((bboxes[:, 1] == sy) & (bboxes[:, 3] == sy)) |
+                                ((bboxes[:, 0] == sx) & (bboxes[:, 2] == sx)) |
+                                ((bboxes[:, 1] == 0) & (bboxes[:, 3] == 0)) |
+                                ((bboxes[:, 0] == 0) & (bboxes[:, 2] == 0)))[0])
+        list_box = list(range(bboxes.shape[0]))
+        for i in out_box:
+            list_box.remove(i)
+        bboxes = bboxes[list_box]
 
-    bboxes[:, 0] += xd
-    bboxes[:, 2] += xd
-    bboxes[:, 1] += yd
-    bboxes[:, 3] += yd
-
-    return bboxes
-
+        bboxes[:, 0] += xd
+        bboxes[:, 2] += xd
+        bboxes[:, 1] += yd
+        bboxes[:, 3] += yd
+        return bboxes
+    else:
+        return bboxes
 
 def blend_truth_mosaic(out_img, img, bboxes, w, h, cut_x, cut_y, i_mixup,
                        left_shift, right_shift, top_shift, bot_shift):
@@ -255,10 +256,11 @@ class Yolo_dataset(Dataset):
         truth = {}
         f = open(lable_path, 'r', encoding='utf-8')
         for line in f.readlines():
-            data = line.split(" ")
+            data = line.rstrip().split(" ")
             truth[data[0]] = []
-            for i in data[1:]:
-                truth[data[0]].append([int(float(j)) for j in i.split(',')])
+            if len(data) > 1:
+                for i in data[1:]:
+                    truth[data[0]].append([int(float(j)) for j in i.split(',')])
 
         self.truth = truth
         self.imgs = list(self.truth.keys())
@@ -295,6 +297,7 @@ class Yolo_dataset(Dataset):
                 img_path = os.path.join(self.cfg.dataset_dir, img_path)
             img = cv2.imread(img_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
             if img is None:
                 continue
             oh, ow, oc = img.shape
@@ -347,12 +350,12 @@ class Yolo_dataset(Dataset):
             sheight = oh - ptop - pbot
 
             truth, min_w_h = fill_truth_detection(bboxes, self.cfg.boxes, self.cfg.classes, flip, pleft, ptop, swidth,
-                                                  sheight, self.cfg.w, self.cfg.h)
+                                                sheight, self.cfg.w, self.cfg.h)
             if (min_w_h / 8) < blur and blur > 1:  # disable blur if one of the objects is too small
                 blur = min_w_h / 8
 
             ai = image_data_augmentation(img, self.cfg.w, self.cfg.h, pleft, ptop, swidth, sheight, flip,
-                                         dhue, dsat, dexp, gaussian_noise, blur, truth)
+                                        dhue, dsat, dexp, gaussian_noise, blur, truth)
 
             if use_mixup == 0:
                 out_img = ai
@@ -377,13 +380,16 @@ class Yolo_dataset(Dataset):
                 bot_shift = int(min(self.cfg.h - cut_y, max(0, (-int(pbot) * self.cfg.h / sheight))))
 
                 out_img, out_bbox = blend_truth_mosaic(out_img, ai, truth.copy(), self.cfg.w, self.cfg.h, cut_x,
-                                                       cut_y, i, left_shift, right_shift, top_shift, bot_shift)
-                out_bboxes.append(out_bbox)
-                # print(img_path)
-        if use_mixup == 3:
-            out_bboxes = np.concatenate(out_bboxes, axis=0)
+                                                    cut_y, i, left_shift, right_shift, top_shift, bot_shift)
+                if len(out_bbox) != 0:
+                    out_bboxes.append(out_bbox)
+
         out_bboxes1 = np.zeros([self.cfg.boxes, 5])
-        out_bboxes1[:min(out_bboxes.shape[0], self.cfg.boxes)] = out_bboxes[:min(out_bboxes.shape[0], self.cfg.boxes)]
+        if len(out_bboxes)>0:
+            if use_mixup == 3:
+                out_bboxes = np.concatenate(out_bboxes, axis=0)
+            out_bboxes1[:min(out_bboxes.shape[0], self.cfg.boxes)] = out_bboxes[:min(out_bboxes.shape[0], self.cfg.boxes)]
+
         return out_img, out_bboxes1
 
     def _get_val_item(self, index):
@@ -399,13 +405,21 @@ class Yolo_dataset(Dataset):
         num_objs = len(bboxes_with_cls_id)
         target = {}
         # boxes to coco format
-        boxes = bboxes_with_cls_id[...,:4]
-        boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
-        target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
-        target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
-        target['image_id'] = torch.tensor([get_image_id(img_path)])
-        target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
-        target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
+        if num_objs > 0:
+            boxes = bboxes_with_cls_id[...,:4]
+            boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
+            target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
+            target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
+            target['image_id'] = torch.tensor([get_image_id(img_path)])
+            target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
+            target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
+        else:
+            target['boxes'] = torch.as_tensor([], dtype=torch.float32)
+            target['labels'] = torch.as_tensor([], dtype=torch.int64)
+            target['image_id'] = torch.tensor([get_image_id(img_path)])
+            target['area'] = torch.as_tensor([], dtype=torch.float32)
+            target['iscrowd'] = torch.as_tensor([], dtype=torch.int64)
+            
         return img, target
 
 
