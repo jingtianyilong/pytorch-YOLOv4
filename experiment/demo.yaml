@@ -4,7 +4,7 @@ cfgfile: '/workspace/code/experiment/yolov4.cfg'
 SEED: 358
 pretrained: '/workspace/code/yolov4.conv.137.pth'
 keep_checkpoint_max: 10
-batch: 64
+batch: 128
 subdivisions: 16
 width: 608
 height: 608
@@ -15,12 +15,10 @@ angle: 0
 saturation: 1.5
 exposure: 1.5
 hue: .1
+anchors: [5,  6,   9, 14,  26, 16,  14, 32,  46, 32,  29, 60,  75, 61, 124, 96, 206,208]
 
 learning_rate: 0.00261
-burn_in: 1000
-max_batches: 500500
-steps: [400000, 450000]
-scales: .1, .1
+burn_in: 500
 
 cutmix: 0
 mosaic: 1
@@ -38,6 +36,5 @@ train_label: "/data/anyverse_train.txt"
 val_label: "/data/anyverse_val.txt"
 TRAIN_OPTIMIZER: 'adam'
 checkpoints: '/workspace/code/checkpoints'
-TRAIN_TENSORBOARD_DIR: '/workspace/code/log'
 iou_type: 'iou'
 keep_checkpoint_max: 10

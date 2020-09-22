@@ -3,11 +3,11 @@ from yacs.config import CfgNode as CN
 
 _C = CN()
 
-_C.use_darknet_cfg = True
+_C.use_darknet_cfg = False
 _C.cfgfile = "experiment/yolov4.cfg" 
 _C.dataset_dir = "/data"
 _C.SEED = 358
-_C.pretrained = 'yolov4.conv.137'
+_C.pretrained = 'yolov4.conv.137.pth'
 _C.keep_checkpoint_max = 10
 _C.batch = 64
 _C.subdivisions = 16
@@ -23,10 +23,6 @@ _C.hue = .1
 
 _C.learning_rate = 0.00261
 _C.burn_in = 1000
-_C.max_batches = 500500
-_C.steps = [400000, 450000]
-_C.policy = _C.steps
-_C.scales = .1, .1
 
 _C.cutmix = 0
 _C.mosaic = 1
@@ -45,16 +41,11 @@ _C.TRAIN_EPOCHS = 80
 _C.train_label = "/data/train.txt"
 _C.val_label = "/data/val.txt"
 _C.TRAIN_OPTIMIZER = 'adam'
+_C.anchors = [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401]
 
-if _C.mosaic and _C.cutmix:
-    _C.mixup = 4
-elif _C.cutmix:
-    _C.mixup = 2
-elif _C.mosaic:
-    _C.mixup = 3
+
     
 _C.checkpoints = 'checkpoints'
-_C.TRAIN_TENSORBOARD_DIR = 'log'
 
 _C.iou_type = 'iou'  # 'giou', 'diou', 'ciou'
 
@@ -63,6 +54,12 @@ _C.keep_checkpoint_max = 10
 def update_config(cfg, args):
     cfg.defrost()
     cfg.merge_from_file(args.config_file)
+    if cfg.mosaic and cfg.cutmix:
+        cfg.mixup = 4
+    elif cfg.cutmix:
+        cfg.mixup = 2
+    elif cfg.mosaic:
+        cfg.mixup = 3
     cfg.freeze()
 
 

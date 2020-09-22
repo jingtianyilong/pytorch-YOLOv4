@@ -14,6 +14,7 @@ import time
 import logging
 import os, sys, math
 import argparse
+import pprint
 from collections import deque
 import datetime
 
@@ -52,9 +53,10 @@ def collate(batch):
     return images, bboxes
 
 
-def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, img_scale=0.5):
+def train(model, device, config, tb_log_dir, epochs=5, batch_size=1, save_cp=True, log_step=5, img_scale=0.5):
     train_dataset = Yolo_dataset(config.train_label, config, train=True)
     val_dataset = Yolo_dataset(config.val_label, config, train=False)
+    # scaler = torch.cuda.amp.GradScaler()
 
     n_train = len(train_dataset)
     n_val = len(val_dataset)
@@ -65,7 +67,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=True, num_workers=8,
                             pin_memory=True, drop_last=True, collate_fn=val_collate)
 
-    writer = SummaryWriter(log_dir=config.TRAIN_TENSORBOARD_DIR,
+    writer = SummaryWriter(log_dir=tb_log_dir,
                            filename_suffix=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}',
                            comment=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}')
     # writer.add_images('legend',
@@ -79,6 +81,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         Batch size:      {config.batch}
         Subdivisions:    {config.subdivisions}
         Learning rate:   {config.learning_rate}
+        Steps:           {max_itr%config.subdivisions}
         Training size:   {n_train}
         Validation size: {n_val}
         Checkpoints:     {save_cp}
@@ -89,44 +92,40 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         Train label path:{config.train_label}
         Pretrained:
     ''')
-
-    # learning rate setup
     def burnin_schedule(i):
         if i < config.burn_in:
             factor = pow(i / config.burn_in, 4)
-        elif i < config.steps[0]:
+        elif i < int(max_itr*0.8)% config.subdivisions:
             factor = 1.0
-        elif i < config.steps[1]:
+        elif i < int(max_itr*0.9)% config.subdivisions:
             factor = 0.1
         else:
             factor = 0.01
         return factor
-
+    
     if config.TRAIN_OPTIMIZER.lower() == 'adam':
         optimizer = optim.Adam(
             model.parameters(),
-            lr=config.learning_rate / config.batch,
+            lr=config.learning_rate,
             betas=(0.9, 0.999),
             eps=1e-08,
         )
     elif config.TRAIN_OPTIMIZER.lower() == 'sgd':
         optimizer = optim.SGD(
             params=model.parameters(),
-            lr=config.learning_rate / config.batch,
+            lr=config.learning_rate,
             momentum=config.momentum,
             weight_decay=config.decay,
         )
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, burnin_schedule)
-
     criterion = Yolo_loss(device=device, batch=config.batch // config.subdivisions, n_classes=config.classes)
-    # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
-    # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
 
     save_prefix = 'Yolov4_epoch'
     saved_models = deque()
-    model.train()
+    # model.train()
     for epoch in range(epochs):
-        # model.train()
+        model.train()
         epoch_loss = 0
         epoch_step = 0
 
@@ -139,7 +138,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
                 images = images.to(device=device, dtype=torch.float32)
                 bboxes = bboxes.to(device=device)
-
+                # with to
                 bboxes_pred = model(images)
                 loss, loss_xy, loss_wh, loss_obj, loss_cls, loss_l2 = criterion(bboxes_pred, bboxes)
                 # loss = loss / config.subdivisions
@@ -156,30 +155,29 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                     writer.add_scalar('train/Loss', loss.item(), global_step)
                     writer.add_scalar('train/loss_xy', loss_xy.item(), global_step)
                     writer.add_scalar('train/loss_wh', loss_wh.item(), global_step)
-                    writer.add_scalar('train/loss_obj', loss_obj.item(), global_step)
+                    # writer.add_scalar('train/loss_obj', loss_obj.item(), global_step)
                     writer.add_scalar('train/loss_cls', loss_cls.item(), global_step)
-                    writer.add_scalar('train/loss_l2', loss_l2.item(), global_step)
-                    writer.add_scalar('lr', scheduler.get_lr()[0] * config.batch, global_step)
+                    # writer.add_scalar('train/loss_l2', loss_l2.item(), global_step)
+                    # writer.add_scalar('lr', scheduler.get_last_lr()[0], global_step)
                     pbar.set_postfix(**{'loss (batch)': loss.item(), 'loss_xy': loss_xy.item(),
                                         'loss_wh': loss_wh.item(),
                                         'loss_obj': loss_obj.item(),
                                         'loss_cls': loss_cls.item(),
                                         'loss_l2': loss_l2.item(),
-                                        'lr': scheduler.get_lr()[0] * config.batch
+                                        'lr': scheduler.get_last_lr()[0]
                                         })
-                    logging.debug('Train step_{}: loss : {},loss xy : {},loss wh : {},'
-                                  'loss obj : {}，loss cls : {},loss l2 : {},lr : {}'
+                    logging.debug('Train step_{:.06f}: loss : {:.06f},loss xy : {:.06f},loss wh : {:.06f},'
+                                  'loss obj : {:.06f}，loss cls : {:.06f},loss l2 : {},lr : {:.06f}'
                                   .format(global_step, loss.item(), loss_xy.item(),
                                           loss_wh.item(), loss_obj.item(),
                                           loss_cls.item(), loss_l2.item(),
-                                          scheduler.get_lr()[0] * config.batch))
-
+                                          scheduler.get_last_lr()[0]))
                 pbar.update(images.shape[0])
 
             if cfg.use_darknet_cfg:
                 eval_model = Darknet(cfg.cfgfile, inference=True)
             else:
-                eval_model = Yolov4(cfg.pretrained, n_classes=cfg.classes, inference=True)
+                eval_model = Yolov4(cfg.anchors,yolov4conv137weight=cfg.pretrained, n_classes=cfg.classes, inference=True)
             if torch.cuda.device_count() > 1:
                 eval_model.load_state_dict(model.module.state_dict())
             else:
@@ -195,21 +193,20 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             writer.add_scalar('train/AP_small', stats[3], global_step)
             writer.add_scalar('train/AP_medium', stats[4], global_step)
             writer.add_scalar('train/AP_large', stats[5], global_step)
-            writer.add_scalar('train/AR1', stats[6], global_step)
-            writer.add_scalar('train/AR10', stats[7], global_step)
-            writer.add_scalar('train/AR100', stats[8], global_step)
-            writer.add_scalar('train/AR_small', stats[9], global_step)
-            writer.add_scalar('train/AR_medium', stats[10], global_step)
-            writer.add_scalar('train/AR_large', stats[11], global_step)
+            # writer.add_scalar('train/AR1', stats[6], global_step)
+            # writer.add_scalar('train/AR10', stats[7], global_step)
+            # writer.add_scalar('train/AR100', stats[8], global_step)
+            # writer.add_scalar('train/AR_small', stats[9], global_step)
+            # writer.add_scalar('train/AR_medium', stats[10], global_step)
+            # writer.add_scalar('train/AR_large', stats[11], global_step)
 
             if save_cp:
                 try:
-                    # os.mkdir(config.checkpoints)
-                    os.makedirs(config.checkpoints, exist_ok=True)
+                    os.makedirs(os.path.join(tb_log_dir,"checkpoints"), exist_ok=True)
                     logging.info('Created checkpoint directory')
                 except OSError:
                     pass
-                save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
+                save_path = os.path.join(tb_log_dir,"checkpoints", f'{save_prefix}{epoch + 1}.pth')
                 torch.save(model.state_dict(), save_path)
                 logging.info(f'Checkpoint {epoch + 1} saved !')
                 saved_models.append(save_path)
@@ -234,8 +231,8 @@ def evaluate(model, data_loader, cfg, device, logger=None, **kwargs):
 
     coco = convert_to_coco_api(data_loader.dataset, bbox_fmt='coco')
     coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"], bbox_fmt='coco')
-
-    for images, targets in data_loader:
+    
+    for images, targets in tqdm(data_loader,desc="Validation Batch: "):
         model_input = [[cv2.resize(img, (cfg.w, cfg.h))] for img in images]
         model_input = np.concatenate(model_input, axis=0)
         model_input = model_input.transpose(0, 3, 1, 2)
@@ -340,17 +337,20 @@ def _get_date_str():
 
 
 if __name__ == "__main__":
-    logging = init_logger(log_dir='log')
     args = getArgs()
     # import config file and save it to log
     update_config(cfg, args)
+    log_dir = os.path.join("log",os.path.basename(args.config_file)[:-5])
+    logging = init_logger(log_dir=log_dir)
+    logging.info(pprint.pformat(args))
+    logging.info(cfg)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
     if cfg.use_darknet_cfg:
         model = Darknet(cfg.cfgfile)
     else:
-        model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
+        model = Yolov4(cfg.anchors, yolov4conv137weight=cfg.pretrained, n_classes=cfg.classes)
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -359,6 +359,7 @@ if __name__ == "__main__":
     try:
         train(model=model,
               config=cfg,
+              tb_log_dir=log_dir,
               epochs=cfg.TRAIN_EPOCHS,
               device=device)
     except KeyboardInterrupt:
