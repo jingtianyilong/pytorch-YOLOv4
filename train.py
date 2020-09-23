@@ -46,6 +46,7 @@ def collate(batch):
     for img, box in batch:
         images.append([img])
         bboxes.append([box])
+    
     images = np.concatenate(images, axis=0)
     images = images.transpose(0, 3, 1, 2)
     images = torch.from_numpy(images).div(255.0)
@@ -55,7 +56,7 @@ def collate(batch):
     return images, bboxes
 
 
-def train(model, device, config, tb_log_dir, epochs=5, batch_size=1, save_cp=True, log_step=5, img_scale=0.5):
+def train(model, device, config, tb_log_dir, anchors, epochs=5, batch_size=1, save_cp=True, log_step=5, img_scale=0.5):
     train_dataset = Yolo_dataset(config.train_label, config, train=True)
     val_dataset = Yolo_dataset(config.val_label, config, train=False)
     # scaler = torch.cuda.amp.GradScaler()
@@ -122,7 +123,7 @@ def train(model, device, config, tb_log_dir, epochs=5, batch_size=1, save_cp=Tru
             weight_decay=config.decay,
         )
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, burnin_schedule)
-    criterion = Yolo_loss(device=device, batch=config.batch // config.subdivisions, n_classes=config.classes)
+    criterion = Yolo_loss(device=device, anchors=anchors, batch=config.batch // config.subdivisions, n_classes=config.classes)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
 
     save_prefix = 'Yolov4_epoch'
@@ -180,7 +181,7 @@ def train(model, device, config, tb_log_dir, epochs=5, batch_size=1, save_cp=Tru
             if cfg.use_darknet_cfg:
                 eval_model = Darknet(cfg.cfgfile, inference=True)
             else:
-                eval_model = Yolov4(cfg.anchors,yolov4conv137weight=cfg.pretrained, n_classes=cfg.classes, inference=True)
+                eval_model = Yolov4(anchors,yolov4conv137weight=cfg.pretrained, n_classes=cfg.classes, inference=True)
             if torch.cuda.device_count() > 1:
                 eval_model.load_state_dict(model.module.state_dict())
             else:
@@ -337,106 +338,40 @@ def _get_date_str():
     now = datetime.datetime.now()
     return now.strftime('%Y-%m-%d_%H-%M')
 
-def get_anchors(label_file, width_in_cfg, height_in_cfg, num_of_anchor=9):
-    def IOU(x,centroids):
-        similarities = []
-        k = len(centroids)
-        for centroid in centroids:
-            c_w,c_h = centroid
-            w,h = x
-            if c_w>=w and c_h>=h:
-                similarity = w*h/(c_w*c_h)
-            elif c_w>=w and c_h<=h:
-                similarity = w*c_h/(w*h + (c_w-w)*c_h)
-            elif c_w<=w and c_h>=h:
-                similarity = c_w*h/(w*h + c_w*(c_h-h))
-            else: #means both w,h are bigger than c_w and c_h respectively
-                similarity = (c_w*c_h)/(w*h)
-            similarities.append(similarity) # will become (k,) shape
-        return np.array(similarities) 
-
-    def avg_IOU(X,centroids):
-        n,d = X.shape
-        sum = 0.
-        for i in range(X.shape[0]):
-            #note IOU() will return array which contains IoU for each centroid and X[i] // slightly ineffective, but I am too lazy
-            sum+= max(IOU(X[i],centroids)) 
-        return sum/n    
-    
-    def kmeans(X,centroids,eps):
-        N = X.shape[0]
-        iterations = 0
-        k,dim = centroids.shape
-        prev_assignments = np.ones(N)*(-1)    
-        iter = 0
-        old_D = np.zeros((N,k))
-
-        while True:
-            D = []
-            iter+=1           
-            for i in range(N):
-                d = 1 - IOU(X[i],centroids)
-                # pdb.set_trace()
-                D.append(d)
-            
-            D = np.array(D)
-            print("iter {}: dists = {}".format(iter,np.sum(np.abs(old_D-D))))
-                
-            #assign samples to centroids 
-            assignments = np.argmin(D,axis=1)
-            
-            if (assignments == prev_assignments).all() :
-                print("Centroids = ",centroids)
-                anchors = centroids.copy()
-                print(anchors.shape)
-                for i in range(anchors.shape[0]):
-                    anchors[i][0]*=width_in_cfg/32.
-                    anchors[i][1]*=height_in_cfg/32.
-                anchors.sort()
-                return list(np.concatenate(anchors))
-
-            #calculate new centroids
-            centroid_sums=np.zeros((k,dim),np.float)
-            for i in range(N):
-                centroid_sums[assignments[i]]+=X[i]        
-            for j in range(k):            
-                centroids[j] = centroid_sums[j]/(np.sum(assignments==j))
-            
-            prev_assignments = assignments.copy()     
-            old_D = D.copy()  
-    
-    f = open(label_file)        
+def get_anchors(cfg, num_of_anchor=9):
+    f = open(cfg.train_label)        
     lines = [line.rstrip('\n') for line in f.readlines()]
     annotation_dims = []
     # pdb.set_trace()
+    from PIL import Image
     for line in lines:
         line = line.rstrip().split()
+        # print(line[0])
+        img = Image.open(os.path.join(cfg.dataset_dir,line[0]))
+        img_w,img_h = img.size
         try:
             for obj in line[1:]:
                 obj = obj.split(",")
-                annotation_dims.append(tuple(map(float,(obj[2],obj[3]))))
+                annotation_dims.append((float(obj[2])/img_w*cfg.width,float(obj[3])/img_h*cfg.height))
         except:
             pass
     annotation_dims = np.array(annotation_dims)
-    eps = 0.005
-   
-    if num_of_anchor == 0:
-        for num_clusters in range(1,11): #we make 1 through 10 clusters 
-            indices = [ random.randrange(annotation_dims.shape[0]) for i in range(num_clusters)]
-            centroids = annotation_dims[indices]
-            anchor_list = kmeans(annotation_dims,centroids,eps)
-    else:
-        indices = [ random.randrange(annotation_dims.shape[0]) for i in range(num_of_anchor)]
-        centroids = annotation_dims[indices]
-        anchor_list = kmeans(annotation_dims,centroids,eps)
-    return anchor_list
+    from sklearn.cluster import KMeans
+    kmeans_calc = KMeans(n_clusters=num_of_anchor)
+    kmeans_calc.fit(annotation_dims)
+    y_kmeans = kmeans_calc.predict(annotation_dims)
+    anchor_list = []
+    for ind in range(num_of_anchor):
+        anchor_list.append(np.mean(annotation_dims[y_kmeans==ind],axis=0))
+
+    return list(map(int,np.concatenate(anchor_list)))
 
 if __name__ == "__main__":
     args = getArgs()
     # import config file and save it to log
     update_config(cfg, args)
     init_seed(cfg.SEED)
-    anchors = get_anchors(cfg.train_label, cfg.width, cfg.height)
+    anchors = get_anchors(cfg)
     log_dir = os.path.join("log",os.path.basename(args.config_file)[:-5])
     logging = init_logger(log_dir=log_dir)
     logging.info(pprint.pformat(args))
@@ -457,6 +392,7 @@ if __name__ == "__main__":
         train(model=model,
               config=cfg,
               tb_log_dir=log_dir,
+              anchors = anchors,
               epochs=cfg.TRAIN_EPOCHS,
               device=device)
     except KeyboardInterrupt:

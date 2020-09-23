@@ -38,10 +38,9 @@ _C.blur = 0
 _C.gaussian = 0
 _C.boxes = 60  # box num
 _C.TRAIN_EPOCHS = 80
-_C.train_label = "/data/train.txt"
-_C.val_label = "/data/val.txt"
+_C.train_label = "/data/anyverse_train.txt"
+_C.val_label = "/data/anyverse_val.txt"
 _C.TRAIN_OPTIMIZER = 'adam'
-_C.anchors = [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401]
 
 
     
