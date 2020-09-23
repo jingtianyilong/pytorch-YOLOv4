@@ -5,7 +5,7 @@ SEED: 358
 pretrained: '/workspace/code/yolov4.conv.137.pth'
 keep_checkpoint_max: 10
 batch: 128
-subdivisions: 16
+subdivisions: 8
 width: 608
 height: 608
 channels: 3
@@ -17,7 +17,7 @@ exposure: 1.5
 hue: .1
 anchors: [5,  6,   9, 14,  26, 16,  14, 32,  46, 32,  29, 60,  75, 61, 124, 96, 206,208]
 
-learning_rate: 0.00261
+learning_rate: 0.0001
 burn_in: 500
 
 cutmix: 0
