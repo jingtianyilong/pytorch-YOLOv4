@@ -41,7 +41,7 @@ _C.TRAIN_EPOCHS = 80
 _C.train_label = "/data/anyverse_train.txt"
 _C.val_label = "/data/anyverse_val.txt"
 _C.TRAIN_OPTIMIZER = 'adam'
-
+_C.namesfile = "data/yolo.names"
 
     
 _C.checkpoints = 'checkpoints'

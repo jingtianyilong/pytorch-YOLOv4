@@ -430,17 +430,24 @@ def get_image_id(filename):
 
 if __name__ == "__main__":
     from config import cfg
-    from config.default import update_config
     import matplotlib.pyplot as plt
     import os
     import sys
     random.seed(2020)
     np.random.seed(2020)
-    update_config(cfg,"experiment/demo.yaml")
+    cfg.defrost()
+    cfg.merge_from_file(sys.argv[1])
+    if cfg.mosaic and cfg.cutmix:
+        cfg.mixup = 4
+    elif cfg.cutmix:
+        cfg.mixup = 2
+    elif cfg.mosaic:
+        cfg.mixup = 3
+    cfg.freeze()
     dataset = Yolo_dataset(cfg.train_label, cfg)
-    for i in range(100):
+    os.makedirs("/workspace/code/dataset_demo",exist_ok=True)
+    for i in range(10):
         out_img, out_bboxes = dataset.__getitem__(i)
         a = draw_box(out_img.copy(), out_bboxes.astype(np.int32))
-        # plt.imshow()
-        os.makedirs("/workspace/code/dataset_demo")
-        plt.savefig("/workspace/code/dataset_demo/{:04d}.png".format(i),a.astype(np.int32))
+        plt.imshow(a.astype(np.int32))
+        plt.savefig("/workspace/code/dataset_demo/{:04d}.png".format(i))

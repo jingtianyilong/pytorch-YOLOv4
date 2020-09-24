@@ -211,7 +211,10 @@ def train(model, device, config, tb_log_dir, anchors, epochs=5, batch_size=1, sa
                 except OSError:
                     pass
                 save_path = os.path.join(tb_log_dir,"checkpoints", f'{save_prefix}{epoch + 1}.pth')
-                torch.save(model.state_dict(), save_path)
+                if torch.cuda.device_count() > 1: 
+                    torch.save(model.module.state_dict(), save_path)
+                else:
+                    torch.save(model.state_dict(), save_path)
                 logging.info(f'Checkpoint {epoch + 1} saved !')
                 saved_models.append(save_path)
                 if len(saved_models) > config.keep_checkpoint_max > 0:
@@ -346,7 +349,6 @@ def get_anchors(cfg, num_of_anchor=9):
     from PIL import Image
     for line in lines:
         line = line.rstrip().split()
-        # print(line[0])
         img = Image.open(os.path.join(cfg.dataset_dir,line[0]))
         img_w,img_h = img.size
         try:
