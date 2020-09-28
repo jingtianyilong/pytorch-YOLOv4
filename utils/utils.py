@@ -67,7 +67,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
 
 
 def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
-    # print(boxes.shape)
+    print(boxes.shape)
     x1 = boxes[:, 0]
     y1 = boxes[:, 1]
     x2 = boxes[:, 2]
@@ -141,8 +141,8 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
             blue = get_color(0, offset, classes)
             if color is None:
                 rgb = (red, green, blue)
-            img = cv2.putText(img, class_names[cls_id], (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1.2, rgb, 1)
-        img = cv2.rectangle(img, (x1, y1), (x2, y2), rgb, 1)
+            img = cv2.putText(img, class_names[cls_id], (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, rgb, 2)
+        img = cv2.rectangle(img, (x1, y1), (x2, y2), rgb, 2)
     if savename:
         print("save plot results to %s" % savename)
         cv2.imwrite(savename, img)
@@ -173,13 +173,7 @@ def load_class_names(namesfile):
 
 def post_processing(img, conf_thresh, nms_thresh, output):
 
-    # anchors = [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401]
-    # num_anchors = 9
-    # anchor_masks = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-    # strides = [8, 16, 32]
-    # anchor_step = len(anchors) // num_anchors
 
-    # [batch, num, 1, 4]
     box_array = output[0]
     # [batch, num, num_classes]
     confs = output[1]
@@ -194,7 +188,6 @@ def post_processing(img, conf_thresh, nms_thresh, output):
 
     # [batch, num, 4]
     box_array = box_array[:, :, 0]
-
     # [batch, num, num_classes] --> [batch, num]
     max_conf = np.max(confs, axis=2)
     max_id = np.argmax(confs, axis=2)

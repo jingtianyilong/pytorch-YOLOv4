@@ -342,31 +342,33 @@ def _get_date_str():
     return now.strftime('%Y-%m-%d_%H-%M')
 
 def get_anchors(cfg, num_of_anchor=9):
-    f = open(cfg.train_label)        
-    lines = [line.rstrip('\n') for line in f.readlines()]
-    annotation_dims = []
-    # pdb.set_trace()
-    from PIL import Image
-    for line in lines:
-        line = line.rstrip().split()
-        img = Image.open(os.path.join(cfg.dataset_dir,line[0]))
-        img_w,img_h = img.size
-        try:
-            for obj in line[1:]:
-                obj = obj.split(",")
-                annotation_dims.append((float(obj[2])/img_w*cfg.width,float(obj[3])/img_h*cfg.height))
-        except:
-            pass
-    annotation_dims = np.array(annotation_dims)
-    from sklearn.cluster import KMeans
-    kmeans_calc = KMeans(n_clusters=num_of_anchor)
-    kmeans_calc.fit(annotation_dims)
-    y_kmeans = kmeans_calc.predict(annotation_dims)
-    anchor_list = []
-    for ind in range(num_of_anchor):
-        anchor_list.append(np.mean(annotation_dims[y_kmeans==ind],axis=0))
-
-    return list(map(int,np.concatenate(anchor_list)))
+    if cfg.anchors == None:
+        f = open(cfg.train_label)        
+        lines = [line.rstrip('\n') for line in f.readlines()]
+        annotation_dims = []
+        from PIL import Image
+        for line in lines:
+            line = line.rstrip().split()
+            img = Image.open(os.path.join(cfg.dataset_dir,line[0]))
+            img_w,img_h = img.size
+            try:
+                for obj in line[1:]:
+                    obj = obj.split(",")
+                    annotation_dims.append((float(obj[2])/img_w*cfg.width,float(obj[3])/img_h*cfg.height))
+            except:
+                pass
+        annotation_dims = np.array(annotation_dims)
+        from sklearn.cluster import KMeans
+        kmeans_calc = KMeans(n_clusters=num_of_anchor)
+        kmeans_calc.fit(annotation_dims)
+        y_kmeans = kmeans_calc.predict(annotation_dims)
+        anchor_list = []
+        for ind in range(num_of_anchor):
+            anchor_list.append(np.mean(annotation_dims[y_kmeans==ind],axis=0))
+        anchor_list = list(map(int,np.concatenate(anchor_list)))
+    else:
+        anchor_list = cfg.anchors
+    return anchor_list
 
 if __name__ == "__main__":
     args = getArgs()

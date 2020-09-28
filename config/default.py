@@ -42,7 +42,7 @@ _C.train_label = "/data/anyverse_train.txt"
 _C.val_label = "/data/anyverse_val.txt"
 _C.TRAIN_OPTIMIZER = 'adam'
 _C.namesfile = "data/yolo.names"
-
+_C.anchors = None
     
 _C.checkpoints = 'checkpoints'
 
@@ -53,6 +53,7 @@ _C.keep_checkpoint_max = 10
 def update_config(cfg, args):
     cfg.defrost()
     cfg.merge_from_file(args.config_file)
+    print(args.config_file)
     if cfg.mosaic and cfg.cutmix:
         cfg.mixup = 4
     elif cfg.cutmix:

@@ -44,13 +44,16 @@ def demo(model, config, anchors):
 if __name__ == "__main__":
     args = getArgs()
     # import config file and save it to log
+    
     update_config(cfg, args)
+
     print("getting anchors...")
     anchors = get_anchors(cfg)
+    print(anchors)
     log_dir = os.path.join("log",os.path.basename(args.config_file)[:-5])
     if not args.load:
         latest_weight = os.path.join(log_dir,"checkpoints",os.listdir(os.path.join(log_dir,"checkpoints"))[0])
-    elif os.path.exists():
+    elif os.path.exists(args.load):
         latest_weight = args.load
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if cfg.use_darknet_cfg:
@@ -60,8 +63,8 @@ if __name__ == "__main__":
     os.makedirs("demo_img",exist_ok=True)
     print("load pretrained weight")
     pretrained_dict = torch.load(latest_weight, map_location=torch.device('cuda'))
-    if torch.cuda.device_count() > 1:
-        eval_model = torch.nn.DataParallel(eval_model)
+    # if torch.cuda.device_count() > 1:
+    #     eval_model = torch.nn.DataParallel(eval_model)
     eval_model.to(device=device)
     eval_model.load_state_dict(pretrained_dict)
 
